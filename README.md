@@ -32,7 +32,7 @@ npm run build
 1. Работа Vuex
    - [Getter](#getter)
    - [Actions](#actions)
-
+   - [Mutations](#mutations)
 
 
 ## <a name="concept">Принцип работы</a>
@@ -91,7 +91,7 @@ export default {
 }
 ```
 
-и регистрируем ('складывать в объект') в свойстве `modules` 
+и регистрируем ("складываем" в объект) в свойстве `modules` 
 ```js
 import post from './modules/post'
 
@@ -103,6 +103,11 @@ export default new Vuex.Store({
 ```
 
 -------------
+
+## <a name="state">State</a>
+<a href="#top">Оглавление</a>
+
+Тут прописываем все переменные которые по итогу будем получать/изменять/удалять 
 
 ## <a name="getter">Getter</a>
 <a href="#top">Оглавление</a>
@@ -138,7 +143,7 @@ export default {
     },
 }
 ``` 
-В `Vuex` есть возможность получить доступ и через объекты, 
+В `Vuex` есть возможность получить доступ и через внутренние объекты, 
 для вызова передаем массив с названиями getter-методов 
 ниже приведенный код. аналогичный ранее приведенному.
 ```js
@@ -149,17 +154,38 @@ export default {
 ``` 
 В данном примере мы получили callback-функцию на геттер, который нам вернет посты  из `Store`
 
+### Вызов `getter` в  `Store`
+
+вторым аргументом функции описанные в `getter` принимают массив самих getters  и могут через него быть вызваны
+```js
+export default {
+    getters: {
+        validPost(state) {
+            return state.posts.filter(p => {
+                return p.title && p.body
+            })
+        },
+        // ...
+        postCounts(state, getters) {
+            return getters.validPost.length
+        }
+    },
+    // ...
+}
+``` 
+В данном случае мы вызываем из функции `postCounts` функцию `validPost`
+
 ------
 
 ## <a name="actions">Actions</a>
 <a href="#top">Оглавление</a>
 
 ### Получить `Action`
+
 В `actions` мы выполняем асинхронные запросы к БД,  
 но напрямую мы не можем обращаться к `state`,
 потому делаем это через функцию `commit` (указана на [схеме](#concept), 
 которая в свою очередь вызывается из `mutations` и внутри работает синхронно
-
 ```js
 export default {
     actions: {
@@ -215,7 +241,8 @@ export default {
 
 ### Передать параметры в `Action`
 Если нам надо передать какие-то данные,
-то мы можем их передать вторым параметром в асинхронную функцию `action`
+то мы можем их передать вторым параметром в асинхронную функцию `action`,
+первым всегда передается контекст
 ```js
 export default {
     actions: {
@@ -227,6 +254,7 @@ export default {
     // ...
 }
 ```
+
 и уже в компоненте передать нужный параметр в вызов
 ```js
 export default {
@@ -236,3 +264,66 @@ export default {
     },
 }
 ```
+
+### Вызов других внутренних методов из `Action`
+
+Собственно `context` который мы получаем первым аргументом в `action` в себе инкапсулирует весь `Store` 
+и собственно через него мы можем получить доступ ко всем ресурсам `Store`, 
+для удобства можно просто декомпозировать сходу в первый агрумент 
+
+```js
+export default {
+    actions: {
+        async fetchPosts({commit, dispatch, getters}, limit = 3) {
+            // ...
+        }
+    },
+    // ...
+}
+```
+
+------
+
+## <a name="mutations">Mutations</a>
+<a href="#top">Оглавление</a>
+
+В разделе мутации прописываются синхронные функции по изменению данных. 
+
+Чтоб не было конфликтов при изменении данных асинхронно мы должны вызывать мутации 
+через функцию `commit` (указана на [схеме](#concept). Данное действие описано в разделе [Actions](#actions).
+
+Но если данные меняются синхронно, к примеру из внутренней формы, 
+тогда вызов осуществляем либо через внутренний объект `$store`,
+либо через `mapMutations`
+
+```js
+import {mapMutations} from "vuex";
+
+export default {
+    data() {
+        return {
+            title: '',
+            body: ''
+        }
+    },
+    methods: {
+        ...mapMutations(['createPost']),
+        submit() {
+            this.createPost({
+                title: this.title,
+                body: this.body,
+                id: Date.now(),
+            });
+        }
+    }
+}
+
+``` 
+В данном примере показано как мы можем все обработчики `mapMutations`, через оператор **spread**(три точки)
+
+
+------
+
+## <a name="mutations">Mutations</a>
+<a href="#top">Оглавление</a>
+
